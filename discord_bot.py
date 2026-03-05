@@ -8,6 +8,7 @@ import asyncio
 from dotenv import load_dotenv
 from time import sleep
 import requests
+import sys
 
 # загружаем токен с виртуального окружения
 load_dotenv()
@@ -26,11 +27,62 @@ intents.members = True # Разрешение видеть людей
 
 bot = commands.Bot(command_prefix="=", intents=intents) # Префикс команд бота
 
+
+async def console_listener():
+    await bot.wait_until_ready()
+    logs.info("Control panel is active. Format:\n<command> <guild_id> <user_id> [role_id/nick\channel_id]")
+    while not bot.is_closed():
+        command_input = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
+
+        if command_input == "format": logs.info("Format:\n<command> <guild_id> <user_id> [role_id/nick/channel_id]")
+        input_parts = command_input.split()
+
+        cmd = input_parts[0].lower()
+
+        if not input_parts:
+            continue
+
+        try:
+            guild = bot.get_guild(int(input_parts[1]))
+            member = guild.get_member(int(input_parts[2]))
+            
+            if not guild or not member:
+                logs.error("Error: Server or member are not found.")
+                continue
+
+            if cmd == "add_role":
+                role = guild.get_role(int(input_parts[3]))
+                await member.add_roles(role)
+                logs.info(f"{member.name} got {role.name}")
+
+            elif cmd == "rem_role":
+                role = guild.get_role(int(input_parts[3]))
+                await member.remove_roles(role)
+                logs.info(f"{member.name} have lost {role.name}")
+
+            elif cmd == "set_nick":
+                new_nick = " ".join(input_parts[3:])
+                await member.edit(nick=new_nick)
+                logs.info(f"The nickname {member.name} has been changed to {new_nick}")
+            
+            elif cmd == "move":
+                chan = guild.get_channel(int(input_parts[3]))
+                await member.move_to(chan)
+                logs.info(f"The {member.name} has been moved to {chan}")
+
+            
+
+        except Exception as e:
+            logs.error(f"Error execution: {e}")
+
+    
+
 @bot.event
 async def on_ready():
     '''`Willingness Report`'''
 
     logs.info("Bot has been launched!")
+    bot.loop.create_task(console_listener())
 
 @bot.command(name="ping")
 async def ping(msg):
@@ -49,7 +101,7 @@ async def all_roles(msg):
     
     count_roles = len(msg.guild.roles) - 1
     for val in msg.guild.roles:
-        print(val)
+        logs.info(val)
     await msg.send(f"There are {count_roles} roles")
 
 @bot.command("waifu")
