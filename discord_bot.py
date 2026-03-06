@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 from time import sleep
 import requests
 import sys
-from random import randint
-from cfg import SERVERS
+from random import randint, choice
+from cfg import SERVERS, CROSSHAIRS
 
 # загружаем токен с виртуального окружения
 load_dotenv()
@@ -114,13 +114,13 @@ async def on_ready():
     bot.loop.create_task(console_listener())
 
 @bot.command(name="ping")
-async def ping(msg):
+async def ping(msg: discord.Message):
     '''`Ping Report`'''
 
     await msg.reply(f'Delay: {round(bot.latency * 1000)}ms')
 
-@bot.command(name="random_agent")
-async def agent(msg):
+@bot.command(name="agent")
+async def agent(msg: discord.Message):
     response = requests.get("https://valorant-api.com/v1/agents?language=ru-RU&isPlayableCharacter=true")
 
     if response.status_code == 200:
@@ -132,20 +132,29 @@ async def agent(msg):
     else:
         await msg.reply(f"Error: status code: {response.status_code}")
 
+@bot.command(name="crosshair")
+async def crosshair(msg):
+    random_crosshair, random_code = choice(list(CROSSHAIRS.items()))
+    await msg.reply(f"Your random crosshair: {random_crosshair}\nCode: {random_code}")
+
 @bot.command(name="all_members")
-async def show_all(msg):
+async def show_all(msg: discord.Message):
     '''Count of all members'''
     humans = [member for member in msg.guild.members if not member.bot]
     
     await msg.reply(f"There are {len(humans)} members.")
 
 @bot.command(name="all_roles")
-async def all_roles(msg):
+async def all_roles(msg: discord.Message):
     
     count_roles = len(msg.guild.roles) - 1
     for val in msg.guild.roles:
         logs.info(val)
     await msg.reply(f"There are {count_roles} roles")
+
+@bot.command(name="help")
+async def help(msg):
+    await msg.send("Prefix: \'=\'All available commands:\n- waifu: send the random waifu pic\n- all_members: general number of members on certain server\n- all_roles: general number of roles on certain server\n- ping: check bot delay\n- agent: get the random valorant agent to play\n- crosshair: get the random valorant crosshair to play")
 
 @bot.command("waifu")
 async def generate_waifu(msg: discord.Message):
