@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from time import sleep
 import requests
 import sys
+from random import randint
+from cfg import SERVERS
 
 # загружаем токен с виртуального окружения
 load_dotenv()
@@ -29,21 +31,52 @@ bot = commands.Bot(command_prefix="=", intents=intents) # Префикс ком�
 
 
 async def console_listener():
+    '''**Sueta**'''
     await bot.wait_until_ready()
-    logs.info("Control panel is active. Format:\n<command> <guild_id> <user_id> [role_id/nick\channel_id]")
+    logs.info("Control panel is active. Format:\n<command> <guild_name> <user_id> [role_id/nick\channel_id]")
     while not bot.is_closed():
         command_input = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
-
-        if command_input == "format": logs.info("Format:\n<command> <guild_id> <user_id> [role_id/nick/channel_id]")
+        
         input_parts = command_input.split()
 
         cmd = input_parts[0].lower()
-
+        
         if not input_parts:
             continue
+        
+        elif len(input_parts) == 1:
+            if "format" in input_parts:
+                logs.info("Format:\n<command> <guild_name> <user_id> [role_id/nick/channel_id]")
+                continue
+            elif "help" in input_parts:
+                logs.info("All existing commands:\n"\
+                "- add_role <guild_name> <user_id> [role_id]\n"\
+                "- rm_role <guild_name> <user_id> [role_id]\n"\
+                "- set_nick <guild_name> <user_id> [new nickname]\n"\
+                "- move <guild_name> <user_id> [channel id]\n"\
+                "- format" \
+                "- roles <guild_name>")
+                continue
+            
+            logs.error("This command doesn't exist.")
+            continue
+
+        elif len(input_parts) == 2:
+            if input_parts[0] == "roles":
+                if input_parts[1] in SERVERS.keys():
+                    guild = bot.get_guild(SERVERS[input_parts[1]])
+                    for role in guild.roles:
+                        is_admin = "[admin]" if role.permissions.administrator else "[not admin]"
+                        logs.info(f"{is_admin} | {role.name} | {role.id}")
+                    continue
+                logs.error("There's no this bot on this server")
+                continue
+            logs.error("This command doesn't exist.")
+            continue
+            
 
         try:
-            guild = bot.get_guild(int(input_parts[1]))
+            guild = bot.get_guild(SERVERS[input_parts[1]])
             member = guild.get_member(int(input_parts[2]))
             
             if not guild or not member:
@@ -55,7 +88,7 @@ async def console_listener():
                 await member.add_roles(role)
                 logs.info(f"{member.name} got {role.name}")
 
-            elif cmd == "rem_role":
+            elif cmd == "rm_role":
                 role = guild.get_role(int(input_parts[3]))
                 await member.remove_roles(role)
                 logs.info(f"{member.name} have lost {role.name}")
@@ -70,12 +103,8 @@ async def console_listener():
                 await member.move_to(chan)
                 logs.info(f"The {member.name} has been moved to {chan}")
 
-            
-
         except Exception as e:
             logs.error(f"Error execution: {e}")
-
-    
 
 @bot.event
 async def on_ready():
@@ -86,15 +115,29 @@ async def on_ready():
 
 @bot.command(name="ping")
 async def ping(msg):
-    '''Ping Report'''
+    '''`Ping Report`'''
 
-    await msg.send(f'Delay: {round(bot.latency * 1000)}ms')
+    await msg.reply(f'Delay: {round(bot.latency * 1000)}ms')
 
-@bot.command(name="all_participants")
+@bot.command(name="random_agent")
+async def agent(msg):
+    response = requests.get("https://valorant-api.com/v1/agents?language=ru-RU&isPlayableCharacter=true")
+
+    if response.status_code == 200:
+        json_data = response.json()
+        agents = json_data['data']
+        random_agent = agents[randint(0, len(agents) - 1)]
+        agent_name = random_agent["displayName"]
+        await msg.reply(f"Your random agent: {agent_name}")
+    else:
+        await msg.reply(f"Error: status code: {response.status_code}")
+
+@bot.command(name="all_members")
 async def show_all(msg):
+    '''Count of all members'''
     humans = [member for member in msg.guild.members if not member.bot]
     
-    await msg.send(f"There are {len(humans)} participants.")
+    await msg.reply(f"There are {len(humans)} members.")
 
 @bot.command(name="all_roles")
 async def all_roles(msg):
@@ -102,7 +145,7 @@ async def all_roles(msg):
     count_roles = len(msg.guild.roles) - 1
     for val in msg.guild.roles:
         logs.info(val)
-    await msg.send(f"There are {count_roles} roles")
+    await msg.reply(f"There are {count_roles} roles")
 
 @bot.command("waifu")
 async def generate_waifu(msg: discord.Message):
@@ -111,7 +154,9 @@ async def generate_waifu(msg: discord.Message):
     if response.status_code == 200:
         data = response.json()
         img = data['url']
-        await msg.send(img)
+        await msg.reply(img)
+    else:
+        await msg.reply(f"There's no response from API. Probably API is broken. Response code: {response.status_code}")
 
 @bot.event
 async def on_message(msg: discord.Message):
@@ -120,7 +165,7 @@ async def on_message(msg: discord.Message):
     
     msg_content = msg.content.lower()
 
-    if msg_content == "нихуя":
+    if "я вахуе" in msg_content or "явахуе" in msg_content:
         await msg.channel.send("Сам вахуе брат")
 
     await bot.process_commands(msg)
