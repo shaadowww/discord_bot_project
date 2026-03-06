@@ -152,9 +152,9 @@ async def all_roles(msg: discord.Message):
         logs.info(val)
     await msg.reply(f"There are {count_roles} roles")
 
-@bot.command(name="help")
-async def help(msg):
-    await msg.send("Prefix: \'=\'All available commands:\n- waifu: send the random waifu pic\n- all_members: general number of members on certain server\n- all_roles: general number of roles on certain server\n- ping: check bot delay\n- agent: get the random valorant agent to play\n- crosshair: get the random valorant crosshair to play")
+# @bot.command(name="help")
+# async def help(msg):
+#     await msg.send("Prefix: \'=\'All available commands:\n- waifu: send the random waifu pic\n- all_members: general number of members on certain server\n- all_roles: general number of roles on certain server\n- ping: check bot delay\n- agent: get the random valorant agent to play\n- crosshair: get the random valorant crosshair to play")
 
 @bot.command("waifu")
 async def generate_waifu(msg: discord.Message):
