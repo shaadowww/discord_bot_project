@@ -6,7 +6,6 @@ from discord.ext import commands
 import logging
 import asyncio
 from dotenv import load_dotenv
-from time import sleep
 import requests
 import sys
 from random import randint, choice
@@ -184,4 +183,4 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     except KeyboardInterrupt:
         logs.info("The bot is gonna close...")
-        sleep(1)
+        asyncio.sleep(1)
