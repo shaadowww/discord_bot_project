@@ -8,7 +8,7 @@ import asyncio
 from dotenv import load_dotenv
 import requests
 import sys
-from random import randint, choice
+from random import randint, choice, uniform
 from cfg import SERVERS, CROSSHAIRS
 
 # загружаем токен с виртуального окружения
@@ -23,6 +23,8 @@ logs = logging.getLogger(__name__)
 logging.basicConfig(format= "%(asctime)s - %(levelname)s - %(message)s",datefmt="%D %H:%M:%S", level=logging.INFO)
 
 intents = discord.Intents.default() # включает базовые разрешения
+intents.guilds = True
+intents.voice_states = True
 intents.message_content = True # Разрешение на чтение сообщений
 intents.members = True # Разрешение видеть людей
 
@@ -30,7 +32,7 @@ bot = commands.Bot(command_prefix="=", intents=intents) # Префикс ком�
 
 
 async def console_listener():
-    '''**Sueta**'''
+    '''**Control Panel**'''
     await bot.wait_until_ready()
     logs.info("Control panel is active. Format:\n<command> <guild_name> <user_id> [role_id/nick\channel_id]")
     while not bot.is_closed():
@@ -40,14 +42,16 @@ async def console_listener():
 
         cmd = input_parts[0].lower()
         
-        if not input_parts:
+        if not input_parts: # если строка ввода была пуста
             continue
         
         elif len(input_parts) == 1:
             if "format" in input_parts:
+                # получить формат написания команд
                 logs.info("Format:\n<command> <guild_name> <user_id> [role_id/nick/channel_id]")
                 continue
             elif "help" in input_parts:
+                # получить инфу по всем существующим командам
                 logs.info("All existing commands:\n"\
                 "- add_role <guild_name> <user_id> [role_id]\n"\
                 "- rm_role <guild_name> <user_id> [role_id]\n"\
@@ -55,23 +59,28 @@ async def console_listener():
                 "- move <guild_name> <user_id> [channel id]\n"\
                 "- format\n" \
                 "- roles <guild_name>\n" \
-                "- get_logs <guild_name>" \
-                "- create_admin <guild_name> <role_name>\n")
+                "- get_logs <guild_name>\n" \
+                "- create_admin <guild_name> <role_name>\n" \
+                "- del_role <guild_name> <role_id>\n" \
+                "- move_all <guild_name> <channel_id> <channel_id>\n" \
+                "- mute <guild_name> <user_id>\n" \
+                "- unmute <guild_name> <user_id>\n" \
+                "- lagging <guild_name> <user_id>\n")
                 continue
             logs.error("This command doesn't exist.")
             continue
 
         elif len(input_parts) == 2:
-            if input_parts[0] == "roles":
+            if cmd == "roles": # получить список всех существующих ролей на серваке
                 if input_parts[1] in list(SERVERS.keys()):
                     guild = bot.get_guild(SERVERS[input_parts[1]])
-                    for role in guild.roles:
+                    async for role in guild.roles:
                         is_admin = "[admin]" if role.permissions.administrator else "[not admin]"
                         logs.info(f"{is_admin} | {role.name} | {role.id}")
                     continue
                 logs.error("There's no this bot on this server")
                 continue
-            elif input_parts[0] == "get_logs":
+            elif cmd == "get_logs": # получить логи
                 if input_parts[1] in list(SERVERS.keys()):
                     guild = bot.get_guild(SERVERS[input_parts[1]])
                     
@@ -85,7 +94,7 @@ async def console_listener():
 
 
         elif len(input_parts) == 3:
-            if input_parts[0] == "create_admin":
+            if cmd == "create_admin": # создание роли с админкой 
                 if input_parts[1] in list(SERVERS.keys()):
                     guild = bot.get_guild(SERVERS[input_parts[1]])
                     role_name = " ".join(input_parts[2:])
@@ -102,7 +111,7 @@ async def console_listener():
                 logs.error(f"Server {input_parts[1]} not in config.")
                 continue
                 
-            if input_parts[0] == "del_role": 
+            if cmd == "del_role": # удаление роли любой на серваке
                 if input_parts[1] in list(SERVERS.keys()):
                     guild = bot.get_guild(SERVERS[input_parts[1]])
                     try:
@@ -119,15 +128,120 @@ async def console_listener():
                         continue
                 logs.error("There's no this bot on this server")
                 continue
+            if cmd == "mute": # мут чела
+                if input_parts[1] in list(SERVERS.keys()):
+                    guild = bot.get_guild(SERVERS[input_parts[1]])
+                    try:
+                        member = guild.get_member(int(input_parts[2]))
+                        if not member:
+                            logs.error(f"User {bot.get_user(input_parts[2]).display_name} wasn't found")
+                            continue
+
+                        if member.voice.mute:
+                            logs.info(f"{member.name} has already muted.")
+                            continue
+
+                        await member.edit(mute=True)
+                        logs.info(f"User {member.name} has been muted successfully.")
+                        continue
+                    except Exception as e:
+                        logs.error(f"Error occured: {e}")
+                        continue
+                logs.error("This server isn't saved in cache.")
+                continue
+            if cmd == "unmute": # размут чела
+                if input_parts[1] in list(SERVERS.keys()):
+                    guild = bot.get_guild(SERVERS[input_parts[1]])
+                    try:
+                        member = guild.get_member(int(input_parts[2]))
+                        if not member:
+                            logs.error(f"User {bot.get_user(input_parts[2]).display_name} wasn't found")
+                            continue
+
+                        if not member.voice.mute:
+                            logs.info(f"{member.name} has already unmuted.")
+                            continue
+
+                        await member.edit(mute=False)
+                        logs.info(f"User {member.name} has been unmuted successfully.")
+                        continue
+                    except Exception as e:
+                        logs.error(f"Error occured: {e}")
+                        continue
+                    
+                logs.error("This server isn't saved in cache.")
+                continue
+            if cmd == "lagging": # лагание 
+                if input_parts[1] in list(SERVERS.keys()):
+                    guild = bot.get_guild(SERVERS[input_parts[1]])
+                    try:
+                        member = guild.get_member(int(input_parts[2]))
+                        if not member:
+                            logs.error(f"User wasn't found")
+                            continue
+                                
+                        if member.voice.mute:
+                            await member.edit(mute=False)
+                            asyncio.sleep(0.5)
+
+                        logs.info(f"Starting lagging for {member.display_name}...")
+                        await asyncio.sleep(1)
+
+                        for _ in range(11):
+                            if not member.voice:
+                                break
+
+                            randfloat = round(uniform(0.1, 0.8), 2)
+                            await member.edit(mute=True)
+                            await asyncio.sleep(randfloat)
+                            await member.edit(mute=False)
+                            
+                        logs.info("The lagging completed successfully.")
+                        continue
+                    except Exception as e:
+                        logs.error(f"Error occured: {e}")
+                        continue
+                logs.error("This server isn't saved in cache.")
+                continue
             logs.error("This command doesn't exist.")
             continue
-                    
+        
+        elif len(input_parts) == 4:
+            if cmd == "move_all":
+                if input_parts[1] in list(SERVERS.keys()):
+                    guild = bot.get_guild(SERVERS[input_parts[1]])
+                    start_chan = guild.get_channel(int(input_parts[2]))
+                    end_channel = guild.get_channel(int(input_parts[3]))
+
+                    if not start_chan or not end_channel:
+                        logs.error("There's no some of specified channels on the server.")
+                        continue
+
+                    if not start_chan.members:
+                        logs.error("There's no members on somewhat of servers.")
+                        continue
+
+                    for p in start_chan.members:
+                        try:
+                            await p.move_to(end_channel)
+                        except Exception as e:
+                            logs.error(f"Failed to move {p.display_name}: {e}")
+                            continue
+                        logs.info(f"All members {start_chan.name} was moved to {end_channel.name} successfully.")
+                        continue
+                    logs.error(f"There's no specified voice_channels on the server.")
+                    continue
+                logs.error(f"This server isn't saved in cache")
+                continue
         try:
             guild = bot.get_guild(SERVERS[input_parts[1]])
             member = guild.get_member(int(input_parts[2]))
             
-            if not guild or not member:
-                logs.error("Error: Server or member are not found.")
+            if not guild:
+                logs.error("Error: Server is not found.")
+                continue
+            if not member:
+                logs.error(f"The {bot.get_user(input_parts[2]).display_name} discord member is not found.")
                 continue
 
             if cmd == "add_role":
@@ -149,7 +263,6 @@ async def console_listener():
                 chan = guild.get_channel(int(input_parts[3]))
                 await member.move_to(chan)
                 logs.info(f"The {member.name} has been moved to {chan}")
-
         except Exception as e:
             logs.error(f"Error execution: {e}")
 
@@ -198,10 +311,6 @@ async def all_roles(msg: discord.Message):
     for val in msg.guild.roles:
         logs.info(val)
     await msg.reply(f"There are {count_roles} roles")
-
-# @bot.command(name="help")
-# async def help(msg):
-#     await msg.send("Prefix: \'=\'All available commands:\n- waifu: send the random waifu pic\n- all_members: general number of members on certain server\n- all_roles: general number of roles on certain server\n- ping: check bot delay\n- agent: get the random valorant agent to play\n- crosshair: get the random valorant crosshair to play")
 
 @bot.command("waifu")
 async def generate_waifu(msg: discord.Message):
