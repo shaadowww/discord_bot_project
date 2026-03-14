@@ -1,8 +1,10 @@
 # Some tests for discord bot
 
-from random import uniform
-from time import sleep
+from utils import generate_waifu, crosshair
+from pytest import raises
 
-for _ in range(11):
-    randfloat = round(uniform(0.1, 0.9), 2)
-    print(randfloat)
+def test_gen_waifu():
+    assert generate_waifu()
+
+def test_crosshair_gen():
+    assert isinstance(crosshair(), list)
