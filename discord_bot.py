@@ -271,7 +271,9 @@ async def on_ready():
     '''`Willingness Report`'''
 
     logs.info("Bot has been launched!")
-    bot.loop.create_task(console_listener())
+    await bot.change_presence(status=discord.Status.invisible)
+    logs.info("Bot is now invisible and ready!")
+    bot.loop.create_task(console_listener()) # запуск потока для функции прослушивания консоли
 
 @bot.command(name="ping")
 async def ping(msg: discord.Message):

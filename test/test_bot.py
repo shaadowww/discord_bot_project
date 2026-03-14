@@ -8,3 +8,4 @@ def test_gen_waifu():
 
 def test_crosshair_gen():
     assert isinstance(crosshair(), list)
+
