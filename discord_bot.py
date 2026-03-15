@@ -271,7 +271,7 @@ async def on_ready():
     '''`Willingness Report`'''
 
     logs.info("Bot has been launched!")
-    await bot.change_presence(status=discord.Status.invisible)
+    await bot.change_presence(status=discord.Status.invisible) # запуск бота в невидимке 
     logs.info("Bot is now invisible and ready!")
     bot.loop.create_task(console_listener()) # запуск потока для функции прослушивания консоли
 

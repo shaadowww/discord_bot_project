@@ -3,7 +3,6 @@ import sys
 from random import choice
 from pathlib import Path
 from typing import List
-
 current_file = Path(__file__).resolve()
 
 project = current_file.parent.parent
@@ -11,6 +10,7 @@ project = current_file.parent.parent
 sys.path.append(str(project))
 
 from cfg import CROSSHAIRS
+from discord_bot import bot
 
 def generate_waifu():
     response = requests.get("https://api.waifu.pics/sfw/waifu")
@@ -23,3 +23,6 @@ def generate_waifu():
 def crosshair() -> List[str]:
     random_crosshair, random_code = choice(list(CROSSHAIRS.items()))
     return [random_crosshair, random_code]
+
+def pinging():
+    return round(bot.latency * 1000, 1)
